@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
@@ -1988,4 +1989,50 @@ func TestFParseErrWhitelistSiblingCommand(t *testing.T) {
 		t.Error("expected unknown flag error")
 	}
 	checkStringContains(t, output, "unknown flag: --unknown")
+}
+
+
+func TestCommand_Print(t *testing.T) {
+	errBuff, outBuff := bytes.NewBuffer(nil), bytes.NewBuffer(nil)
+
+	wantErr := []byte("PrintErrPrintErr line\nPrintErr")
+	wantOut := []byte("PrintPrint line\nPrint")
+
+	root := &Command{
+		Run: func(cmd *Command, args []string) {
+
+			cmd.PrintErr("PrintErr")
+			cmd.PrintErrln("PrintErr", "line")
+			cmd.PrintErrf("PrintEr%s", "r")
+
+			cmd.Print("Print")
+			cmd.Println("Print", "line")
+			cmd.Printf("Prin%s", "t")
+		},
+	}
+
+	root.SetErr(errBuff)
+	root.SetOut(outBuff)
+
+	if err := root.Execute(); err != nil {
+		t.Error(err)
+	}
+
+	errBytes, err := ioutil.ReadAll(errBuff)
+	if err != nil {
+		t.Error(err)
+	}
+
+	outBytes, err := ioutil.ReadAll(outBuff)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !bytes.Equal(errBytes, wantErr) {
+		t.Errorf("got: '%s' want: '%s'", errBytes, wantErr)
+	}
+
+	if !bytes.Equal(outBytes, wantOut) {
+		t.Errorf("got: '%s' want: '%s'", outBytes, wantOut)
+	}
 }
